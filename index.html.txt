@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Alvi Upload</title>
+<meta name="theme-color" content="#F2F2F0" />
+<style>
+  :root{
+    --bg: #F2F2F0;
+    --ink: #111111;
+    --paper: #FFFFFF;
+    --ok: #1F9254;
+    --danger: #C4342A;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --sh: 4px 4px 0 var(--ink);
+    --sh-sm: 3px 3px 0 var(--ink);
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  body{ min-height:100vh; display:flex; justify-content:center; padding:28px 16px 90px; }
+  .wrap{ width:100%; max-width:520px; }
+
+  /* Header */
+  .brand{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .brand .mark{
+    width:42px; height:42px; background:var(--ink); color:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:20px; box-shadow:var(--sh-sm); flex:0 0 auto;
+  }
+  .brand h1{ font-size:19px; font-weight:800; margin:0; letter-spacing:-.01em; }
+  .brand .tag{ font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:#555; }
+
+  .tagbox{
+    display:inline-block; border:2px solid var(--ink); padding:4px 10px;
+    font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; margin-bottom:12px; background:var(--paper); box-shadow:var(--sh-sm);
+  }
+
+  .box{
+    background:var(--paper); border:2px solid var(--ink); box-shadow:var(--sh);
+    padding:16px; margin-bottom:18px;
+  }
+
+  /* Stat grid */
+  .stats{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .stat{ border:2px solid var(--ink); padding:12px; box-shadow:var(--sh-sm); }
+  .stat .num{ font-size:22px; font-weight:800; letter-spacing:-.01em; }
+  .stat .lbl{ font-size:11px; color:#555; margin-top:2px; }
+
+  /* Drop zone */
+  #dropzone{
+    border:2px dashed var(--ink); padding:32px 14px; text-align:center; cursor:pointer;
+    transition:background .12s ease;
+  }
+  #dropzone.drag{ background:#EDEDEA; }
+  #dropzone .icon{ font-size:28px; margin-bottom:8px; }
+  #dropzone .main-txt{ font-size:14px; font-weight:700; margin-bottom:3px; }
+  #dropzone .sub-txt{ font-size:11px; color:#555; font-family:var(--mono); letter-spacing:.03em; }
+  #fileInput{ display:none; }
+
+  /* Pipeline */
+  #pipeline{ display:none; margin-top:16px; }
+  .filename-row{
+    font-family:var(--mono); font-size:12px; display:flex; justify-content:space-between; margin-bottom:6px;
+  }
+  .progress-track{ height:10px; border:2px solid var(--ink); overflow:hidden; margin-bottom:12px; }
+  .progress-fill{ height:100%; width:0%; background:var(--ink); transition:width .1s linear; }
+
+  .stages{ display:flex; align-items:center; margin-bottom:12px; }
+  .stage{ display:flex; flex-direction:column; align-items:center; gap:5px; width:70px; }
+  .stage .dot{ width:12px; height:12px; border:2px solid var(--ink); background:var(--paper); }
+  .stage.active .dot{ background:var(--ink); }
+  .stage.done .dot{ background:var(--ok); border-color:var(--ok); }
+  .stage.error .dot{ background:var(--danger); border-color:var(--danger); }
+  .stage label{ font-size:10px; font-family:var(--mono); font-weight:700; text-transform:uppercase; }
+  .line{ flex:1; height:2px; background:var(--ink); position:relative; top:-11px; opacity:.25; }
+  .line.done{ opacity:1; background:var(--ok); }
+
+  .result{ display:none; margin-top:8px; }
+  .result.show{ display:block; }
+  .url-box{ display:flex; gap:0; border:2px solid var(--ink); }
+  .url-box input{
+    flex:1; background:var(--paper); border:none; color:var(--ok); font-family:var(--mono);
+    font-size:12px; outline:none; min-width:0; padding:10px 12px; font-weight:700;
+  }
+  .copy-btn{
+    background:var(--ink); color:var(--paper); border:none; border-left:2px solid var(--ink);
+    padding:0 16px; font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .copy-btn.copied{ background:var(--ok); }
+
+  .error-msg{
+    display:none; color:var(--paper); font-size:12px; font-family:var(--mono); font-weight:700;
+    margin-top:10px; padding:10px 12px; background:var(--danger); border:2px solid var(--ink);
+  }
+  .error-msg.show{ display:block; }
+
+  /* History */
+
+  .section-title{
+    font-size:12px; font-family:var(--mono); font-weight:700; text-transform:uppercase;
+    letter-spacing:.05em; margin:0 0 10px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .clear-btn{ background:none; border:none; color:#555; font-size:11px; font-family:var(--mono); cursor:pointer; text-decoration:underline; }
+  .history-item{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:2px solid var(--ink); }
+  .history-item:last-child{ border-bottom:none; }
+  .history-thumb{
+    width:36px; height:36px; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center;
+    font-size:14px; font-weight:700; flex:0 0 auto; overflow:hidden;
+  }
+  .history-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .history-info{ flex:1; min-width:0; }
+  .history-name{ font-family:var(--mono); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
+  .history-time{ font-size:11px; color:#555; }
+  .history-copy{ background:var(--paper); border:2px solid var(--ink); width:32px; height:32px; cursor:pointer; font-size:13px; flex:0 0 auto; }
+  .empty-hint{ font-size:12px; color:#555; text-align:center; padding:20px 0; font-family:var(--mono); }
+
+  /* Settings */
+  .gear{
+    position:fixed; top:16px; right:16px; width:38px; height:38px;
+    border:2px solid var(--ink); background:var(--paper); box-shadow:var(--sh-sm);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; z-index:10;
+  }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:#000A; z-index:50; align-items:center; justify-content:center; padding:16px; }
+  .modal-overlay.show{ display:flex; }
+  .modal{ background:var(--paper); border:2px solid var(--ink); box-shadow:6px 6px 0 var(--ink); padding:20px; width:100%; max-width:340px; }
+  .modal h2{ font-size:15px; margin:0 0 12px; font-weight:800; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11px; font-weight:700; margin-bottom:5px; font-family:var(--mono); }
+  .field input{
+    width:100%; background:var(--paper); border:2px solid var(--ink);
+    padding:9px 10px; font-size:13px; font-family:var(--mono); outline:none;
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:8px; }
+  .btn-primary{ flex:1; background:var(--ink); color:var(--paper); border:2px solid var(--ink); padding:10px; font-size:13px; font-weight:700; cursor:pointer; }
+  .btn-secondary{ background:var(--paper); border:2px solid var(--ink); padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<button class="gear" id="gearBtn" title="设置" aria-label="设置">⚙</button>
+
+<div class="wrap">
+  <div class="brand">
+    <div class="mark">A</div>
+    <div>
+      <h1>ALVI UPLOAD</h1>
+      <div class="tag">GITHUB · JSDELIVR</div>
+    </div>
+  </div>
+
+  <div class="box">
+    <span class="tagbox">已就绪</span>
+    <div class="stats">
+      <div class="stat"><div class="num">20MB</div><div class="lbl">单文件上限</div></div>
+      <div class="stat"><div class="num">5 种</div><div class="lbl">PNG·JPG·WEBP·GIF·MP3</div></div>
+    </div>
+
+    <div id="dropzone">
+      <div class="icon">⇪</div>
+      <div class="main-txt">点击选择 / 拖拽到此处</div>
+      <div class="sub-txt">支持 GIF</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp,image/gif,audio/mpeg" />
+
+    <div id="pipeline">
+      <div class="filename-row">
+        <span id="pFilename">—</span>
+        <span id="pPercent">0%</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+      <div class="stages">
+        <div class="stage" id="stage1"><div class="dot"></div><label>上传</label></div>
+        <div class="line" id="line1"></div>
+        <div class="stage" id="stage2"><div class="dot"></div><label>GitHub</label></div>
+        <div class="line" id="line2"></div>
+        <div class="stage" id="stage3"><div class="dot"></div><label>CDN</label></div>
+      </div>
+
+      <div class="result" id="resultBox">
+        <div class="url-box">
+          <input type="text" id="resultUrl" readonly />
+          <button class="copy-btn" id="copyBtn">复制</button>
+        </div>
+      </div>
+      <div class="error-msg" id="errorBox"></div>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="section-title">
+      <span>历史记录</span>
+      <button class="clear-btn" id="clearHistoryBtn">清除</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h2>连接设置</h2>
+    <div class="field">
+      <label>WORKER ENDPOINT</label>
+      <input type="text" id="endpointInput" placeholder="https://xxx.workers.dev/upload" />
+    </div>
+    <div class="field">
+      <label>UPLOAD TOKEN</label>
+      <input type="password" id="tokenInput" placeholder="共享口令" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="cancelSettingsBtn">取消</button>
+      <button class="btn-primary" id="saveSettingsBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+
+(function(){
+  const LS_HISTORY = "alvi_upload_history";
+  const LS_ENDPOINT = "alvi_upload_endpoint";
+  const LS_TOKEN = "alvi_upload_token";
+  const MAX_SIZE = 20 * 1024 * 1024;
+  const ALLOWED = ["image/png","image/jpeg","image/webp","image/gif","audio/mpeg"];
+
+  const dropzone = document.getElementById("dropzone");
+  const fileInput = document.getElementById("fileInput");
+  const pipeline = document.getElementById("pipeline");
+  const pFilename = document.getElementById("pFilename");
+  const pPercent = document.getElementById("pPercent");
+  const progressFill = document.getElementById("progressFill");
+  const resultBox = document.getElementById("resultBox");
+  const resultUrl = document.getElementById("resultUrl");
+  const copyBtn = document.getElementById("copyBtn");
+  const errorBox = document.getElementById("errorBox");
+  const historyList = document.getElementById("historyList");
+  const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+  const gearBtn = document.getElementById("gearBtn");
+  const settingsModal = document.getElementById("settingsModal");
+  const endpointInput = document.getElementById("endpointInput");
+  const tokenInput = document.getElementById("tokenInput");
+  const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+  const cancelSettingsBtn = document.getElementById("cancelSettingsBtn");
+
+  const stages = [1,2,3].map(n => ({ el: document.getElementById("stage"+n) }));
+  const lines = [1,2].map(n => document.getElementById("line"+n));
+
+  function getConfig(){
+    return {
+      endpoint: localStorage.getItem(LS_ENDPOINT) || "",
+      token: localStorage.getItem(LS_TOKEN) || "",
+    };
+  }
+  function isConfigured(){ const c = getConfig(); return !!(c.endpoint && c.token); }
+
+  function openSettings(){
+    const c = getConfig();
+    endpointInput.value = c.endpoint;
+    tokenInput.value = c.token;
+    settingsModal.classList.add("show");
+  }
+  function closeSettings(){ settingsModal.classList.remove("show"); }
+
+  gearBtn.addEventListener("click", openSettings);
+  cancelSettingsBtn.addEventListener("click", closeSettings);
+  saveSettingsBtn.addEventListener("click", () => {
+    localStorage.setItem(LS_ENDPOINT, endpointInput.value.trim());
+    localStorage.setItem(LS_TOKEN, tokenInput.value.trim());
+    closeSettings();
+  });
+
+  dropzone.addEventListener("click", () => fileInput.click());
+  ["dragenter","dragover"].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.add("drag"); }));
+  ["dragleave","drop"].forEach(ev => dropzone.addEventListener(ev, e => { e.preventDefault(); dropzone.classList.remove("drag"); }));
+  dropzone.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) handleFile(f); });
+  fileInput.addEventListener("change", e => { const f = e.target.files[0]; if (f) handleFile(f); fileInput.value = ""; });
+
+  function resetPipeline(){
+    stages.forEach(s => s.el.classList.remove("active","done","error"));
+    lines.forEach(l => l.classList.remove("done"));
+    progressFill.style.width = "0%";
+    pPercent.textContent = "0%";
+    resultBox.classList.remove("show");
+    errorBox.classList.remove("show");
+    errorBox.textContent = "";
+  }
+
+  function setStage(idx, state){
+    stages[idx].el.classList.remove("active","done","error");
+    stages[idx].el.classList.add(state);
+    if (idx > 0 && state === "done") lines[idx-1].classList.add("done");
+  }
+
+  function handleFile(file){
+    if (!isConfigured()){ openSettings(); return; }
+    if (!ALLOWED.includes(file.type)){ showError("不支持的文件类型"); return; }
+    if (file.size > MAX_SIZE){ showError("超过 20MB (" + (file.size/1024/1024).toFixed(1) + "MB)"); return; }
+    upload(file);
+  }
+
+  function showError(msg){
+    pipeline.style.display = "block";
+    errorBox.textContent = msg;
+    errorBox.classList.add("show");
+  }
+
+  function upload(file){
+    resetPipeline();
+    pipeline.style.display = "block";
+    pFilename.textContent = file.name;
+    setStage(0, "active");
+
+    const cfg = getConfig();
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append("file", file);
+
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      const pct = Math.round((e.loaded / e.total) * 100);
+      progressFill.style.width = pct + "%";
+      pPercent.textContent = pct + "%";
+      if (pct >= 100){ setStage(0, "done"); setStage(1, "active"); }
+    };
+
+    xhr.onload = () => {
+      let data;
+      try { data = JSON.parse(xhr.responseText); } catch(e){ data = null; }
+      if (xhr.status === 200 && data && data.url){
+        setStage(1, "done"); setStage(2, "done");
+        resultUrl.value = data.url;
+        resultBox.classList.add("show");
+        addHistory({ name: file.name, url: data.url, path: data.path, time: Date.now(), type: file.type });
+      } else {
+        setStage(1, "error");
+        showError((data && (data.error || data.detail)) || ("上传失败 (HTTP " + xhr.status + ")"));
+      }
+    };
+
+    xhr.onerror = () => { setStage(1, "error"); showError("网络错误，请检查 Worker 地址"); };
+    xhr.open("POST", cfg.endpoint);
+    xhr.setRequestHeader("X-Upload-Token", cfg.token);
+    xhr.send(formData);
+  }
+
+  
+copyBtn.addEventListener("click", () => {
+    resultUrl.select(); resultUrl.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(resultUrl.value).then(() => {
+      copyBtn.textContent = "已复制"; copyBtn.classList.add("copied");
+      setTimeout(() => { copyBtn.textContent = "复制"; copyBtn.classList.remove("copied"); }, 1500);
+    });
+  });
+
+  function getHistory(){ try { return JSON.parse(localStorage.getItem(LS_HISTORY) || "[]"); } catch(e){ return []; } }
+  function saveHistory(list){ localStorage.setItem(LS_HISTORY, JSON.stringify(list.slice(0, 100))); }
+  function addHistory(item){ const list = getHistory(); list.unshift(item); saveHistory(list); renderHistory(); }  function relTime(ts){
+    const diff = Date.now() - ts; const min = Math.floor(diff / 60000);
+    if (min < 1) return "刚刚"; if (min < 60) return min + " 分钟前";
+    const hr = Math.floor(min / 60); if (hr < 24) return hr + " 小时前";
+    return Math.floor(hr / 24) + " 天前";
+  }
+  function iconFor(type){ if (type === "audio/mpeg") return "♪"; if (type === "image/gif") return "GIF"; return "🖼"; }
+  function renderHistory(){
+    const list = getHistory();
+    if (list.length === 0){ historyList.innerHTML = '<div class="empty-hint">暂无记录</div>'; return; }
+    historyList.innerHTML = list.map((item, i) => {
+      const isImg = item.type && item.type.startsWith("image/");
+      const thumb = isImg ? '< img src="'+ item.url +'" loading="lazy" onerror="this.parentElement.textContent=\'?\'" />' : iconFor(item.type);
+      return (
+        '<div class="history-item">' +
+          '<div class="history-thumb">'+ thumb +'</div>' +
+          '<div class="history-info"><div class="history-name">'+ escapeHtml(item.name) +'</div><div class="history-time">'+ relTime(item.time) +'</div></div>' +
+          '<button class="history-copy" data-idx="'+ i +'">⧉</button>' +
+        '</div>'
+      );
+    }).join("");
+    historyList.querySelectorAll(".history-copy").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.getAttribute("data-idx"), 10);
+        const item = getHistory()[idx];
+        if (item) navigator.clipboard.writeText(item.url).then(() => { btn.textContent = "✓"; setTimeout(() => btn.textContent = "⧉", 1200); });
+      });
+    });
+  }
+  function escapeHtml(str){ const d = document.createElement("div"); d.textContent = str; return d.innerHTML; }
+
+  clearHistoryBtn.addEventListener("click", () => {
+    if (confirm("仅清除本机记录，GitHub 文件不受影响。确定？")){ localStorage.removeItem(LS_HISTORY); renderHistory(); }
+  });
+
+  renderHistory();
+  if (!isConfigured()) setTimeout(openSettings, 300);
+})();
+</script>
+
+</body>
+</html>
